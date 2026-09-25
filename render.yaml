@@ -1,0 +1,15 @@
+# Render.com blueprint (free web service). Set SOLAMI_API_KEY in the Render dashboard, not here.
+services:
+  - type: web
+    name: mintcheck
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 1 --threads 8 --timeout 60 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SOLAMI_API_KEY
+        sync: false
+      - key: RPC_RPS
+        value: "4"
+      - key: PYTHON_VERSION
+        value: "3.12.7"

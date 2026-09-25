@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MintCheck: live Solana token safety radar</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <div class="brand">🛡️ MintCheck <span class="sub">live Solana token safety radar · powered by Solami</span></div>
+  <div id="status" class="status">connecting…</div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Check a token before you buy</h2>
+    <form id="form">
+      <input id="mint" placeholder="Paste a token mint address (e.g. DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263)" autocomplete="off" spellcheck="false">
+      <button type="submit">Check</button>
+    </form>
+    <div class="examples">Try:
+      <a href="#" data-mint="DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263">BONK</a> ·
+      <a href="#" data-mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v">USDC</a> ·
+      <a href="#" data-mint="JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN">JUP</a>
+    </div>
+    <div id="report"></div>
+    <p id="proNote" class="hint" hidden>Running on the Solami free plan (RPC). Live launch/trending feeds and buy/sell pressure turn on automatically with a Blur (DataApi) key.</p>
+  </section>
+
+  <section class="card" id="feedCard" hidden>
+    <div class="feed-head">
+      <h2>Live feed</h2>
+      <div class="tabs">
+        <button class="tab active" data-kind="launches">🚀 New launches</button>
+        <button class="tab" data-kind="trending">🔥 Trending (1h)</button>
+      </div>
+    </div>
+    <p class="hint">Every token in the feed is auto-checked for mint &amp; freeze authority with one batched Solami RPC call. Refreshes every 10 s.</p>
+    <div id="feed">loading…</div>
+  </section>
+</main>
+
+<footer>Not financial advice. A good score does not mean a token is a good investment; it only means the obvious traps were not found. Open source · MIT</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>
