@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 SUBMISSION_NOTES.md
 screenshot_test_mode.png
+.vercel

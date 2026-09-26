@@ -1,13 +1,18 @@
 """
 MintCheck - live Solana token safety radar, powered by Solami.
 
-Run:  python app.py      then open http://127.0.0.1:8000
+Local:   python app.py      then open http://127.0.0.1:8000
+Vercel:  zero-config Flask. Vercel finds the `app` object in this file; files in public/ are served by its CDN.
+
+Serverless notes: nothing runs in the background. The thread pool below is only used *inside* a request
+(parallel Solami calls that finish before the response is sent). Rate limiting on a stateless platform is done
+with CDN caching (Cache-Control s-maxage on every /api response) plus the per-instance limiter and 429 retries.
 """
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, redirect, request, send_from_directory
 
 import safety
 from solami_client import SolamiClient, SolamiError
@@ -25,14 +30,35 @@ def load_env_file(path=".env"):
 
 load_env_file()
 
-app = Flask(__name__, static_folder="static", static_url_path="/static")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PUBLIC_DIR = os.path.join(BASE_DIR, "public")
+ON_VERCEL = bool(os.getenv("VERCEL"))
+
+# Locally Flask serves public/ (index.html, /static/app.js, /static/style.css). On Vercel the CDN serves public/ first.
+app = Flask(__name__, static_folder=PUBLIC_DIR, static_url_path="")
 client = SolamiClient()
 pool = ThreadPoolExecutor(max_workers=6)
 
 
 @app.get("/")
 def index():
-    return send_from_directory("static", "index.html")
+    if os.path.exists(os.path.join(PUBLIC_DIR, "index.html")):
+        return send_from_directory(PUBLIC_DIR, "index.html")
+    return redirect("/index.html", code=307)  # Vercel: let the CDN serve public/index.html
+
+
+# Shared-cache lifetimes (seconds). The CDN answers repeat requests, so many visitors = few Solami calls.
+CACHE_SECONDS = {"/api/status": 5, "/api/check": 15, "/api/feed": 10}
+
+
+@app.after_request
+def add_cache_headers(resp):
+    ttl = CACHE_SECONDS.get(request.path)
+    if ttl and resp.status_code == 200:
+        resp.headers["Cache-Control"] = f"public, max-age=0, s-maxage={ttl}, stale-while-revalidate={ttl * 2}"
+    elif request.path.startswith("/api/"):
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 # ------------------------------------------------------------------------------------------------

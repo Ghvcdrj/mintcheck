@@ -89,11 +89,29 @@ RPC_URL=https://api.mainnet-beta.solana.com python tests/live_smoke.py   # live 
 SOLAMI_API_KEY=... python tests/live_smoke.py                     # full live test through Solami
 ```
 
-## Deploy for free (Render)
-1. Push this repo to GitHub.
-2. On https://render.com → New → Blueprint → choose the repo (it reads `render.yaml`).
-3. Set `SOLAMI_API_KEY` in the service's Environment tab.
-4. Free instances sleep after ~15 min idle; the first request then takes ~30–60 s.
+## Deploy for free (Vercel Hobby, no credit card)
+The repo is ready for Vercel's zero-config Flask support: Vercel finds the `app` object in `app.py`, serves `public/`
+from its CDN, and runs the API as one serverless Python function (`vercel.json` sets a 30 s max duration and keeps
+tests, screenshots and `.env` out of the bundle).
+
+1. Sign in at https://vercel.com with GitHub (Hobby plan, free).
+2. **Add New… → Project → Import** the `mintcheck` repository.
+3. Framework Preset: **Flask** (auto-detected). Leave Build/Output settings empty and Root Directory as `./`.
+4. **Environment Variables:** add `SOLAMI_API_KEY` = your Solami key (tick Production and Preview).
+   Optional: `RPC_RPS` = `4`. Do **not** set `RPC_URL` in production.
+5. Click **Deploy**. Your site will be at `https://<project>.vercel.app`. Every push to `main` redeploys automatically.
+
+How it stays inside Solami's rate limit on a stateless platform: every `/api` response carries
+`Cache-Control: s-maxage=…` (status 5 s, check 15 s, feed 10 s), so Vercel's CDN answers repeat requests and many
+visitors cost only a few Solami calls. Each warm function instance also has its own limiter and short 429 retries.
+Nothing runs in the background. `alerts.py` (Telegram alerts) is a long-running loop, so run it on your own
+computer, not on Vercel.
+
+Check the build locally without an account (optional): `npx vercel build`. This writes `.vercel/output`, which is gitignored.
+If it also generates `pyproject.toml`/`uv.lock`, you can delete them; `requirements.txt` is the source of truth.
+
+### Alternative: Render
+`render.yaml` still works (`gunicorn app:app`), but Render now asks for a credit card, even for the free instance.
 
 ## How the score works
 Start at 100 and subtract: mint authority on −30, freeze authority on −25, permanent delegate −30, transfer hook −15,
@@ -107,7 +125,8 @@ app.py            Flask server + API routes
 solami_client.py  Solami RPC + Blur client (rate limit, cache, retries, key scrubbing)
 safety.py         pure scoring logic (unit-tested)
 alerts.py         optional Telegram launch alerts
-static/           index.html, app.js, style.css (no build step)
+public/           index.html + static/app.js, static/style.css (served by Vercel CDN / Flask locally)
+vercel.json       Vercel function settings
 tests/            unit tests + live smoke test
 ```
 

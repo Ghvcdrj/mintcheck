@@ -19,7 +19,8 @@ DATA_BASE = "https://api.solami.dev"
 
 
 class RateLimiter:
-    """Very small 'max N calls per second' limiter (free plan = 5 RPC calls per second)."""
+    """Very small 'max N calls per second' limiter (free plan = 5 RPC calls per second).
+    On serverless each warm instance has its own limiter; the CDN cache in app.py keeps the total low."""
 
     def __init__(self, per_second: float):
         self.min_gap = 1.0 / per_second
@@ -114,7 +115,8 @@ class SolamiClient:
                 raise SolamiError(f"RPC network error: {self._scrub(e)}")
             if r.status_code != 429:
                 break
-            time.sleep(1.5 * (attempt + 1))
+            # Short back-off: serverless functions should answer quickly (Vercel sets VERCEL=1).
+            time.sleep((0.5 if os.getenv("VERCEL") else 1.5) * (attempt + 1))
         if r.status_code == 429:
             raise SolamiError("RPC rate limit hit (429). Try again in a few seconds.")
         if r.status_code != 200:
